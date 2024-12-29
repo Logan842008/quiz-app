@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
@@ -16,10 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 
-export default function ScorePage() {
+function ScorePageContent() {
   const params = useSearchParams();
   const id = params.get("id");
-  const answers = JSON.parse(params.get("answers") || "[]");
+  const answers = JSON.parse(decodeURIComponent(params.get("answers") || "[]"));
   const quiz = quizzes.find((q) => q.id === id);
   const [previousScore, setPreviousScore] = useState(null);
 
@@ -31,21 +31,23 @@ export default function ScorePage() {
   const percentage = (score / quiz.questions.length) * 100;
 
   useEffect(() => {
-    const quizScores = JSON.parse(localStorage.getItem("quizScores") || "{}");
-    const prevScore = quizScores[id];
+    if (typeof window !== "undefined") {
+      const quizScores = JSON.parse(localStorage.getItem("quizScores") || "{}");
+      const prevScore = quizScores[id];
 
-    quizScores[id] = {
-      score,
-      total: quiz.questions.length,
-      percentage,
-      timestamp: new Date().toISOString(),
-      previousScore: prevScore?.score || null,
-    };
+      quizScores[id] = {
+        score,
+        total: quiz.questions.length,
+        percentage,
+        timestamp: new Date().toISOString(),
+        previousScore: prevScore?.score || null,
+      };
 
-    if (prevScore) {
-      setPreviousScore(prevScore);
+      if (prevScore) {
+        setPreviousScore(prevScore);
+      }
+      localStorage.setItem("quizScores", JSON.stringify(quizScores));
     }
-    localStorage.setItem("quizScores", JSON.stringify(quizScores));
   }, [id, score, percentage, quiz.questions.length]);
 
   const getScoreComparison = () => {
@@ -192,5 +194,13 @@ export default function ScorePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ScorePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ScorePageContent />
+    </Suspense>
   );
 }
